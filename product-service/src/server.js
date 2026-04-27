@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const mongoose = require('mongoose');
 require('dotenv').config();
 const connectDB = require('./config/database');
 const productRoutes = require('./routes/product');
@@ -31,6 +32,11 @@ app.use(cors({
 // Middleware
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+
+// Make Mongo queries fail fast in tests so smoke tests do not hang on buffering
+if (process.env.NODE_ENV === 'test') {
+    mongoose.set('bufferTimeoutMS', 1000);
+}
 
 // Connect to Database (skip in test mode)
 if (process.env.NODE_ENV !== 'test') {
