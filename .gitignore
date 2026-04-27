@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment files (security - never commit real secrets)
+.env
+**/.env
+!**/.env.example
+
+# Build outputs
+dist/
+build/
+**/dist/
+**/build/
+**/coverage/
+
+# Logs
+*.log
+logs/
+**/logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Docker
+docker-compose.override.yml

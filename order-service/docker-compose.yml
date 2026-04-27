@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:5
+    container_name: order-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+    ports:
+      - "27017:27017"
+    volumes:
+      - order-mongodb-data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  order-service:
+    build: .
+    container_name: order-service
+    environment:
+      PORT: 3003
+      NODE_ENV: development
+      MONGODB_URI: mongodb://admin:password@mongodb:27017/order-service?authSource=admin
+      USER_SERVICE_URL: http://localhost:3001/api/users
+      PRODUCT_SERVICE_URL: http://localhost:3002/api/products
+    ports:
+      - "3003:3003"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  order-mongodb-data:
+
+networks:
+  default:
+    name: order-network

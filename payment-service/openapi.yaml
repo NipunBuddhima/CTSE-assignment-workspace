@@ -1,0 +1,473 @@
+openapi: 3.0.0
+info:
+  title: Payment Service API
+  version: 1.0.0
+  description: Payment processing, transaction management, and invoice generation microservice
+  contact:
+    name: CTSE Team
+    url: https://ctse.example.com
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:3004/api/payments
+    description: Development server
+  - url: https://api.example.com/api/payments
+    description: Production server
+
+paths:
+  /:
+    post:
+      summary: Create a new payment
+      tags:
+        - Payment Management
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - orderId
+                - userId
+                - amount
+                - paymentMethod
+              properties:
+                orderId:
+                  type: string
+                  example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+                userId:
+                  type: string
+                  example: "user123"
+                amount:
+                  type: number
+                  format: float
+                  example: 99.99
+                currency:
+                  type: string
+                  default: USD
+                  example: "USD"
+                paymentMethod:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                      enum: [credit_card, debit_card, paypal, bank_transfer, digital_wallet]
+                    last4:
+                      type: string
+                    brand:
+                      type: string
+                description:
+                  type: string
+                metadata:
+                  type: object
+      responses:
+        '201':
+          description: Payment created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+        '400':
+          description: Bad request
+
+  /{paymentId}:
+    get:
+      summary: Get payment by ID
+      tags:
+        - Payment Management
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Payment retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+        '404':
+          description: Payment not found
+
+  /{paymentId}/process:
+    post:
+      summary: Process payment
+      tags:
+        - Payment Processing
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                processorReference:
+                  type: string
+                processorCustomerId:
+                  type: string
+      responses:
+        '200':
+          description: Payment processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+
+  /{paymentId}/authorize:
+    post:
+      summary: Authorize payment
+      tags:
+        - Payment Processing
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Payment authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+
+  /{paymentId}/charge:
+    post:
+      summary: Charge authorized payment
+      tags:
+        - Payment Processing
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Payment charged
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+
+  /{paymentId}/refund:
+    post:
+      summary: Refund payment (full or partial)
+      tags:
+        - Refunds
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  format: float
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Refund initiated successfully
+
+  /{paymentId}/transactions:
+    get:
+      summary: Get transaction history for a payment
+      tags:
+        - Transactions
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Transaction history retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Transaction'
+
+  /transactions/list:
+    get:
+      summary: Get all transactions
+      tags:
+        - Transactions
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, success, failed, cancelled]
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [charge, refund, partial_refund, retry, reversal]
+      responses:
+        '200':
+          description: Transactions retrieved
+
+  /{paymentId}/invoice:
+    post:
+      summary: Generate invoice for payment
+      tags:
+        - Invoices
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                dueDate:
+                  type: string
+                  format: date-time
+                items:
+                  type: array
+      responses:
+        '201':
+          description: Invoice generated successfully
+
+  /invoices/{invoiceId}:
+    get:
+      summary: Get invoice by ID
+      tags:
+        - Invoices
+      parameters:
+        - name: invoiceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Invoice retrieved
+
+  /{paymentId}/retry:
+    post:
+      summary: Retry failed payment
+      tags:
+        - Payment Processing
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Payment retry initiated
+
+  /{paymentId}/dispute:
+    post:
+      summary: Open dispute for payment
+      tags:
+        - Disputes
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                evidence:
+                  type: array
+      responses:
+        '201':
+          description: Dispute opened
+
+  /stats/summary:
+    get:
+      summary: Get payment statistics
+      tags:
+        - Statistics
+      parameters:
+        - name: userId
+          in: query
+          schema:
+            type: string
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Statistics retrieved
+
+  /{paymentId}/cancel:
+    post:
+      summary: Cancel payment
+      tags:
+        - Payment Management
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Payment cancelled
+
+components:
+  schemas:
+    PaymentResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/Payment'
+
+    Payment:
+      type: object
+      properties:
+        paymentId:
+          type: string
+          format: uuid
+        orderId:
+          type: string
+        userId:
+          type: string
+        amount:
+          type: number
+          format: float
+        currency:
+          type: string
+        status:
+          type: string
+          enum: [pending, authorized, charged, refunded, partial_refund, failed, cancelled]
+        paymentMethod:
+          type: object
+          properties:
+            type:
+              type: string
+            last4:
+              type: string
+            brand:
+              type: string
+        refunds:
+          type: array
+          items:
+            $ref: '#/components/schemas/Refund'
+        createdAt:
+          type: string
+          format: date-time
+        chargedAt:
+          type: string
+          format: date-time
+
+    Transaction:
+      type: object
+      properties:
+        transactionId:
+          type: string
+          format: uuid
+        paymentId:
+          type: string
+        type:
+          type: string
+          enum: [charge, refund, partial_refund, retry, reversal]
+        amount:
+          type: number
+          format: float
+        status:
+          type: string
+          enum: [pending, success, failed, cancelled]
+        timestamp:
+          type: string
+          format: date-time
+
+    Refund:
+      type: object
+      properties:
+        refundId:
+          type: string
+        amount:
+          type: number
+          format: float
+        status:
+          type: string
+          enum: [pending, completed, failed]
+        reason:
+          type: string
+        initiatedAt:
+          type: string
+          format: date-time

@@ -1,0 +1,654 @@
+openapi: 3.0.0
+info:
+  title: Product Service API
+  description: Product Catalog and Inventory Management Microservice
+  version: 1.0.0
+  contact:
+    name: CTSE Team
+    url: https://ctse.example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3002
+    description: Development server
+  - url: http://product-service:3002
+    description: Docker network (internal)
+
+tags:
+  - name: Catalog
+    description: Product catalog operations (create, read, update, delete)
+  - name: Inventory
+    description: Inventory management operations (reserve, release, restock, consume)
+
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  service:
+                    type: string
+                    example: product-service
+
+  /api/products:
+    get:
+      summary: Get all products with filtering and pagination
+      tags:
+        - Catalog
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: category
+          in: query
+          schema:
+            type: string
+          description: Filter by category
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search in name and description
+        - name: minPrice
+          in: query
+          schema:
+            type: number
+        - name: maxPrice
+          in: query
+          schema:
+            type: number
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [createdAt, price-asc, price-desc, rating]
+            default: createdAt
+        - name: inStock
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  page:
+                    type: integer
+                  limit:
+                    type: integer
+                  total:
+                    type: integer
+                  pages:
+                    type: integer
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+
+    post:
+      summary: Create a new product (admin only)
+      tags:
+        - Catalog
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - description
+                - category
+                - price
+                - sku
+              properties:
+                name:
+                  type: string
+                  example: "iPhone 15 Pro"
+                description:
+                  type: string
+                  example: "Latest Apple smartphone with advanced features"
+                category:
+                  type: string
+                  example: "Electronics"
+                price:
+                  type: object
+                  properties:
+                    originalPrice:
+                      type: number
+                      example: 1200
+                    currentPrice:
+                      type: number
+                      example: 999
+                    discount:
+                      type: number
+                      example: 16
+                sku:
+                  type: string
+                  example: "IP15P-256GB-BLACK"
+                inventory:
+                  type: object
+                  properties:
+                    quantity:
+                      type: integer
+                      example: 50
+                    reorderLevel:
+                      type: integer
+                      example: 20
+                specifications:
+                  type: object
+                  properties:
+                    color:
+                      type: string
+                    weight:
+                      type: string
+                tags:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '201':
+          description: Product created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/Product'
+        '400':
+          description: Bad request - missing required fields
+
+  /api/products/id/{productId}:
+    get:
+      summary: Get product by ID
+      tags:
+        - Catalog
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Product details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Product'
+        '404':
+          description: Product not found
+
+    put:
+      summary: Update product
+      tags:
+        - Catalog
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                category:
+                  type: string
+                price:
+                  type: object
+                  properties:
+                    originalPrice:
+                      type: number
+                    currentPrice:
+                      type: number
+                    discount:
+                      type: number
+      responses:
+        '200':
+          description: Product updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/Product'
+
+    delete:
+      summary: Delete product (soft delete)
+      tags:
+        - Catalog
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Product deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+
+  /api/products/sku/{sku}:
+    get:
+      summary: Get product by SKU (inter-service)
+      tags:
+        - Catalog
+      parameters:
+        - name: sku
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Product found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Product'
+
+  /api/products/{productId}/inventory:
+    get:
+      summary: Get product inventory details
+      tags:
+        - Inventory
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Inventory details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      productId:
+                        type: string
+                      name:
+                        type: string
+                      sku:
+                        type: string
+                      inventory:
+                        type: object
+                        properties:
+                          quantity:
+                            type: integer
+                          reserved:
+                            type: integer
+                          available:
+                            type: integer
+                          warehouse:
+                            type: string
+                          reorderLevel:
+                            type: integer
+                          isLowOnStock:
+                            type: boolean
+
+  /api/products/{productId}/restock:
+    post:
+      summary: Restock product inventory
+      tags:
+        - Inventory
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                quantity:
+                  type: integer
+                  minimum: 1
+                  example: 100
+      responses:
+        '200':
+          description: Product restocked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      productId:
+                        type: string
+                      sku:
+                        type: string
+                      oldQuantity:
+                        type: integer
+                      newQuantity:
+                        type: integer
+                      added:
+                        type: integer
+                      lastRestocked:
+                        type: string
+                        format: date-time
+
+  /api/products/{productId}/reserve:
+    post:
+      summary: Reserve inventory (for orders)
+      tags:
+        - Inventory
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                quantity:
+                  type: integer
+                  minimum: 1
+                  example: 5
+      responses:
+        '200':
+          description: Inventory reserved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      productId:
+                        type: string
+                      sku:
+                        type: string
+                      reserved:
+                        type: integer
+                      available:
+                        type: integer
+        '400':
+          description: Insufficient available inventory
+
+  /api/products/{productId}/release:
+    post:
+      summary: Release reserved inventory (order cancelled)
+      tags:
+        - Inventory
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                quantity:
+                  type: integer
+                  minimum: 1
+                  example: 5
+      responses:
+        '200':
+          description: Inventory released
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+
+  /api/products/{productId}/consume:
+    post:
+      summary: Consume inventory (order completed)
+      tags:
+        - Inventory
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                quantity:
+                  type: integer
+                  minimum: 1
+                  example: 5
+      responses:
+        '200':
+          description: Inventory consumed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+
+  /api/products/inventory/low-stock:
+    get:
+      summary: Get low stock products
+      tags:
+        - Inventory
+      responses:
+        '200':
+          description: List of low stock products
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  count:
+                    type: integer
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        productId:
+                          type: string
+                        name:
+                          type: string
+                        quantity:
+                          type: integer
+                        reorderLevel:
+                          type: integer
+                        isLowOnStock:
+                          type: boolean
+
+components:
+  schemas:
+    Product:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        productId:
+          type: string
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        name:
+          type: string
+          example: "iPhone 15 Pro"
+        description:
+          type: string
+          example: "Latest Apple smartphone with advanced features"
+        category:
+          type: string
+          example: "Electronics"
+        price:
+          type: object
+          properties:
+            originalPrice:
+              type: number
+              example: 1200
+            currentPrice:
+              type: number
+              example: 999
+            discount:
+              type: number
+              example: 16
+        sku:
+          type: string
+          example: "IP15P-256GB-BLACK"
+        inventory:
+          type: object
+          properties:
+            quantity:
+              type: integer
+              example: 50
+            reserved:
+              type: integer
+              example: 5
+            warehouse:
+              type: string
+              example: "Main Warehouse"
+            reorderLevel:
+              type: integer
+              example: 20
+            lastRestocked:
+              type: string
+              format: date-time
+        specifications:
+          type: object
+          properties:
+            color:
+              type: string
+            weight:
+              type: string
+            material:
+              type: string
+            brand:
+              type: string
+        images:
+          type: array
+          items:
+            type: object
+            properties:
+              url:
+                type: string
+              alt:
+                type: string
+              isPrimary:
+                type: boolean
+        rating:
+          type: object
+          properties:
+            averageRating:
+              type: number
+              minimum: 0
+              maximum: 5
+            reviewCount:
+              type: integer
+        isActive:
+          type: boolean
+          example: true
+        tags:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
