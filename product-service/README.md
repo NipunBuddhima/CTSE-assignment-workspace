@@ -2,7 +2,7 @@
 
 A comprehensive product catalog and inventory management microservice built with Node.js, Express, and MongoDB. Provides RESTful APIs for managing products, categories, pricing, and inventory operations.
 
-## 📋 Table of Contents
+## 📋 Table of Content
 
 - [Features](#features)
 - [Technology Stack](#technology-stack)
