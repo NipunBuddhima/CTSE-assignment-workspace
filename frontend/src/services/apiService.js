@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-const GATEWAY_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api';
+const USER_BASE_URL = 'http://13.60.167.38:3001/api';
+const PRODUCT_BASE_URL = 'http://13.62.101.70:3002/api';
+const ORDER_BASE_URL = 'http://13.62.98.180:3003/api';
+const PAYMENT_BASE_URL = 'http://13.63.56.188:3004/api';
 
 // Get auth token from localStorage
 const getAuthToken = () => localStorage.getItem('token');
@@ -46,78 +49,81 @@ const createApiClient = (baseURL) => {
     return client;
 };
 
-const api = createApiClient(GATEWAY_BASE_URL);
+const userApi = createApiClient(USER_BASE_URL);
+const productApi = createApiClient(PRODUCT_BASE_URL);
+const orderApi = createApiClient(ORDER_BASE_URL);
+const paymentApi = createApiClient(PAYMENT_BASE_URL);
 
 // ================== USER SERVICE ==================
 
 export const authService = {
-    register: (data) => api.post('/auth/register', data),
-    login: (email, password) => api.post('/auth/login', { email, password }),
+    register: (data) => userApi.post('/auth/register', data),
+    login: (email, password) => userApi.post('/auth/login', { email, password }),
     changePassword: (currentPassword, newPassword, confirmPassword) =>
-        api.post('/auth/change-password', { currentPassword, newPassword, confirmPassword }),
-    getProfile: () => api.get('/users/profile'),
-    updateProfile: (data) => api.put('/users/profile', data),
-    verifyEmail: () => api.post('/users/verify-email'),
-    deactivateAccount: () => api.post('/users/deactivate'),
+        userApi.post('/auth/change-password', { currentPassword, newPassword, confirmPassword }),
+    getProfile: () => userApi.get('/users/profile'),
+    updateProfile: (data) => userApi.put('/users/profile', data),
+    verifyEmail: () => userApi.post('/users/verify-email'),
+    deactivateAccount: () => userApi.post('/users/deactivate'),
 };
 
 // ================== PRODUCT SERVICE ==================
 
 export const productService = {
-    getAllProducts: (filters = {}) => api.get('/products', { params: filters }),
-    getProductById: (productId) => api.get(`/products/id/${productId}`),
-    getProductBySku: (sku) => api.get(`/products/sku/${sku}`),
-    createProduct: (data) => api.post('/products', data),
-    updateProduct: (productId, data) => api.put(`/products/${productId}`, data),
-    deleteProduct: (productId) => api.delete(`/products/${productId}`),
-    getInventory: (productId) => api.get(`/products/${productId}/inventory`),
+    getAllProducts: (filters = {}) => productApi.get('/products', { params: filters }),
+    getProductById: (productId) => productApi.get(`/products/id/${productId}`),
+    getProductBySku: (sku) => productApi.get(`/products/sku/${sku}`),
+    createProduct: (data) => productApi.post('/products', data),
+    updateProduct: (productId, data) => productApi.put(`/products/${productId}`, data),
+    deleteProduct: (productId) => productApi.delete(`/products/${productId}`),
+    getInventory: (productId) => productApi.get(`/products/${productId}/inventory`),
     restockProduct: (productId, quantity) =>
-        api.post(`/products/${productId}/restock`, { quantity }),
+        productApi.post(`/products/${productId}/restock`, { quantity }),
     reserveInventory: (productId, quantity) =>
-        api.post(`/products/${productId}/reserve`, { quantity }),
+        productApi.post(`/products/${productId}/reserve`, { quantity }),
     releaseInventory: (productId, quantity) =>
-        api.post(`/products/${productId}/release`, { quantity }),
+        productApi.post(`/products/${productId}/release`, { quantity }),
 };
 
 // ================== ORDER SERVICE ==================
 
 export const orderService = {
-    createOrder: (data) => api.post('/orders', data),
-    getAllOrders: (filters = {}) => api.get('/orders', { params: filters }),
-    getOrderById: (orderId) => api.get(`/orders/${orderId}`),
-    getUserOrders: (userId) => api.get(`/orders/user/${userId}/orders`),
+    createOrder: (data) => orderApi.post('/orders', data),
+    getAllOrders: (filters = {}) => orderApi.get('/orders', { params: filters }),
+    getOrderById: (orderId) => orderApi.get(`/orders/${orderId}`),
+    getUserOrders: (userId) => orderApi.get(`/orders/user/${userId}/orders`),
     updateOrderStatus: (orderId, status) =>
-        api.put(`/orders/${orderId}/status`, { status }),
+        orderApi.put(`/orders/${orderId}/status`, { status }),
     addTrackingEvent: (orderId, event) =>
-        api.post(`/orders/${orderId}/tracking`, { event }),
-    cancelOrder: (orderId) => api.post(`/orders/${orderId}/cancel`),
-    getOrderTracking: (orderId) => api.get(`/orders/${orderId}/tracking`),
-    getOrderHistory: (userId) => api.get(`/orders/${userId}/history`),
-    getOrderStats: () => api.get('/orders/stats/summary'),
+        orderApi.post(`/orders/${orderId}/tracking`, { event }),
+    cancelOrder: (orderId) => orderApi.post(`/orders/${orderId}/cancel`),
+    getOrderTracking: (orderId) => orderApi.get(`/orders/${orderId}/tracking`),
+    getOrderHistory: (userId) => orderApi.get(`/orders/${userId}/history`),
+    getOrderStats: () => orderApi.get('/orders/stats/summary'),
 };
 
 // ================== PAYMENT SERVICE ==================
 
 export const paymentService = {
-    createPayment: (data) => api.post('/payments', data),
-    processPayment: (paymentId) => api.post(`/payments/${paymentId}/process`),
+    createPayment: (data) => paymentApi.post('/payments', data),
+    processPayment: (paymentId) => paymentApi.post(`/payments/${paymentId}/process`),
     authorizePayment: (paymentId) =>
-        api.post(`/payments/${paymentId}/authorize`),
-    chargePayment: (paymentId) => api.post(`/payments/${paymentId}/charge`),
-    getPaymentById: (paymentId) => api.get(`/payments/${paymentId}`),
+        paymentApi.post(`/payments/${paymentId}/authorize`),
+    chargePayment: (paymentId) => paymentApi.post(`/payments/${paymentId}/charge`),
+    getPaymentById: (paymentId) => paymentApi.get(`/payments/${paymentId}`),
     getPaymentByOrderId: (orderId) =>
-        api.get(`/payments/order/${orderId}`),
-    getUserPayments: (userId) => api.get(`/payments/user/${userId}/payments`),
+        paymentApi.get(`/payments/order/${orderId}`),
+    getUserPayments: (userId) => paymentApi.get(`/payments/user/${userId}/payments`),
     refundPayment: (paymentId, amount, reason) =>
-        api.post(`/payments/${paymentId}/refund`, { amount, reason }),
+        paymentApi.post(`/payments/${paymentId}/refund`, { amount, reason }),
     getTransactionHistory: (paymentId) =>
-        api.get(`/payments/${paymentId}/transactions`),
-    getAllTransactions: () => api.get('/payments/transactions/list'),
+        paymentApi.get(`/payments/${paymentId}/transactions`),
+    getAllTransactions: () => paymentApi.get('/payments/transactions/list'),
     generateInvoice: (paymentId, data) =>
-        api.post(`/payments/${paymentId}/invoice`, data),
-    getInvoice: (invoiceId) => api.get(`/payments/invoices/${invoiceId}`),
+        paymentApi.post(`/payments/${paymentId}/invoice`, data),
+    getInvoice: (invoiceId) => paymentApi.get(`/payments/invoices/${invoiceId}`),
     getPaymentInvoices: (paymentId) =>
-        api.get(`/payments/${paymentId}/invoices`),
+        paymentApi.get(`/payments/${paymentId}/invoices`),
 };
 
 export default {
