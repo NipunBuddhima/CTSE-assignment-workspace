@@ -302,7 +302,7 @@ exports.addTrackingEvent = async (req, res) => {
         const { event, location, description } = req.body;
 
         const order = await Order.findOne({ orderId });
-
+    
         if (!order) {
             return res
                 .status(404)

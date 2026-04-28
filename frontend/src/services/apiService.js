@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const USER_BASE_URL = 'http://13.60.167.38:3001/api';
+const USER_BASE_URL = 'http://13.61.25.40:3001/api';
 const PRODUCT_BASE_URL = 'http://13.62.101.70:3002/api';
 const ORDER_BASE_URL = 'http://13.62.98.180:3003/api';
 const PAYMENT_BASE_URL = 'http://13.63.56.188:3004/api';
